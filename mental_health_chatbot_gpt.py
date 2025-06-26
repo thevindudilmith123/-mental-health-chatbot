@@ -111,23 +111,23 @@ elif choice == "Login":
 if st.session_state.logged_in:
     st.markdown(f"### 💬 Hello **{st.session_state.username}**, how are you feeling today?")
 
-    user_input = st.text_input("Type your message and press Enter", key="chat_input")
+    # Chat input
+    with st.form("chat_form", clear_on_submit=True):
+        user_input = st.text_input("Type your message")
+        submitted = st.form_submit_button("Send")
 
-    if user_input:
+    if submitted and user_input:
         bot_reply = generate_response(user_input)
 
-        # Add to chat history
+        # Save to chat history
         st.session_state.chat_history.append(("user", user_input))
         st.session_state.chat_history.append(("bot", bot_reply))
 
-        # Save to chat log file
+        # Save to log file
         with open("chat_log_basic.txt", "a") as f:
             f.write(f"{datetime.datetime.now()} | {st.session_state.username} | User: {user_input} | Bot: {bot_reply}\n")
 
-        # Refresh to clear input
-        st.experimental_rerun()
-
-    # Display chat history (most recent last)
+    # Display chat history (latest last)
     for role, msg in st.session_state.chat_history:
         if role == "user":
             st.markdown(f"🧍‍♂️ **You:** {msg}")
