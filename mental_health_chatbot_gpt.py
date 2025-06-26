@@ -52,28 +52,34 @@ def get_sentiment(text):
 def generate_response(text):
     mood = get_sentiment(text)
     if mood == "positive":
-        return "That's wonderful to hear! Keep the positivity flowing 😊"
+        return "That's wonderful to hear! 😊 Keep spreading the good vibes!"
     elif mood == "negative":
-        return "I'm sorry you're feeling this way. You're not alone 💙 Take a deep breath and be kind to yourself."
+        return "I'm really sorry you're feeling this way. You're not alone 💙 Take a deep breath and be kind to yourself."
     else:
-        return "Thanks for sharing. I'm here if you want to talk more 💬"
+        return "Thank you for sharing. I'm here if you want to talk more 💬"
 
 # -----------------------
 # Streamlit App
 # -----------------------
 
-st.set_page_config(page_title="Mental Health Chatbot", layout="centered")
+st.set_page_config(page_title="AI Mental Health Chatbot", layout="centered")
+st.title("🧠 AI Mental Health Chatbot (No API Needed)")
 
-st.title("🧠 AI Mental Health Chatbot ")
-
-# Sidebar Navigation
+# Sidebar Menu
 menu = ["Login", "Register"]
 choice = st.sidebar.selectbox("🔐 Menu", menu)
 
+# Session State Setup
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
+# -----------------------
 # Register Page
+# -----------------------
 if choice == "Register":
     st.subheader("📝 Create New Account")
     new_user = st.text_input("Choose a username")
@@ -84,7 +90,9 @@ if choice == "Register":
         else:
             st.warning("⚠️ Username already exists. Try a different one.")
 
+# -----------------------
 # Login Page
+# -----------------------
 elif choice == "Login":
     st.subheader("🔑 Login to Your Account")
     username = st.text_input("Username")
@@ -97,18 +105,34 @@ elif choice == "Login":
         else:
             st.error("❌ Incorrect username or password")
 
-# Chatbot Page (Only if Logged In)
+# -----------------------
+# Chatbot Page
+# -----------------------
 if st.session_state.logged_in:
-    st.markdown("## 💬 How are you feeling today?")
-    user_input = st.text_input("Type your message below")
+    st.markdown(f"### 💬 Hello **{st.session_state.username}**, how are you feeling today?")
+
+    user_input = st.text_input("Type your message and press Enter", key="chat_input")
 
     if user_input:
-        reply = generate_response(user_input)
-        st.markdown(f"**Bot:** {reply}")
+        bot_reply = generate_response(user_input)
 
+        # Add to chat history
+        st.session_state.chat_history.append(("user", user_input))
+        st.session_state.chat_history.append(("bot", bot_reply))
+
+        # Save to chat log file
         with open("chat_log_basic.txt", "a") as f:
-            f.write(f"{datetime.datetime.now()} | {st.session_state.username} | User: {user_input} | Bot: {reply}\n")
+            f.write(f"{datetime.datetime.now()} | {st.session_state.username} | User: {user_input} | Bot: {bot_reply}\n")
+
+        # Refresh to clear input
+        st.experimental_rerun()
+
+    # Display chat history (most recent last)
+    for role, msg in st.session_state.chat_history:
+        if role == "user":
+            st.markdown(f"🧍‍♂️ **You:** {msg}")
+        else:
+            st.markdown(f"🤖 **Bot:** {msg}")
 
     st.markdown("---")
     st.markdown("📘 *This chatbot is for emotional support only. Not a medical tool.*")
-
