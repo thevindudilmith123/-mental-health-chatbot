@@ -19,7 +19,7 @@ if "chat_history" not in st.session_state:
 # Page Setup
 # -----------------------
 st.set_page_config(page_title="AI Mental Health Chatbot", layout="centered")
-st.title("🧠 AI Mental Health Chatbot (No API Needed)")
+st.title("🧠 AI Mental Health Chatbot")
 
 # -----------------------
 # User Handling Functions
