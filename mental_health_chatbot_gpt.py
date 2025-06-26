@@ -1,16 +1,53 @@
 import streamlit as st
 from textblob import TextBlob
-import datetime
+import hashlib
+import json
+import os
 
-# App UI
-st.set_page_config(page_title="AI Mental Wellness Chatbot", layout="centered")
-st.title("🧠 AI Mental Health Chatbot (No API)")
-st.caption("This chatbot gives supportive messages based on your feelings.")
+# -----------------------
+# Utilities
+# -----------------------
 
-# User Input
-user_input = st.text_input("💬 How are you feeling today?")
+def load_users():
+    if os.path.exists("users.json"):
+        with open("users.json", "r") as f:
+            return json.load(f)
+    else:
+        return {}
 
-# Sentiment Detector
+def save_users(users):
+    with open("users.json", "w") as f:
+        json.dump(users, f)
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# -----------------------
+# Registration
+# -----------------------
+
+def register_user(username, password):
+    users = load_users()
+    if username in users:
+        return False
+    users[username] = hash_password(password)
+    save_users(users)
+    return True
+
+# -----------------------
+# Authentication
+# -----------------------
+
+def login_user(username, password):
+    users = load_users()
+    if username in users and users[username] == hash_password(password):
+        return True
+    return False
+
+# -----------------------
+# Sentiment Chatbot
+# -----------------------
+
 def get_sentiment(text):
     blob = TextBlob(text)
     polarity = blob.sentiment.polarity
@@ -21,24 +58,57 @@ def get_sentiment(text):
     else:
         return "neutral"
 
-# Bot Logic
 def generate_response(text):
     mood = get_sentiment(text)
     if mood == "positive":
-        return "That's wonderful to hear! Keep the positive vibes going 😊"
+        return "That's wonderful to hear! 😊"
     elif mood == "negative":
-        return "I'm really sorry you're feeling this way. It's okay to take a break. You're not alone 💙"
+        return "I'm really sorry you're feeling this way. You're not alone 💙"
     else:
-        return "Thank you for sharing. I'm here if you want to talk more 💬"
+        return "Thanks for sharing. I'm here if you want to talk more 💬"
 
-# Show Result
-if user_input:
-    response = generate_response(user_input)
-    st.markdown(f"**Bot:** {response}")
+# -----------------------
+# Streamlit UI
+# -----------------------
 
-    with open("chat_log_basic.txt", "a") as f:
-        f.write(f"{datetime.datetime.now()} | User: {user_input} | Bot: {response}\n")
+st.set_page_config(page_title="Mental Health Chatbot", layout="centered")
 
-# Footer
-st.markdown("---")
-st.markdown("📘 *Note: This chatbot is for emotional support only and not a medical tool.*")
+menu = ["Login", "Register"]
+choice = st.sidebar.selectbox("🔐 Menu", menu)
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# --- Register Page ---
+if choice == "Register":
+    st.subheader("📝 Create New Account")
+    new_user = st.text_input("Username")
+    new_pass = st.text_input("Password", type="password")
+    if st.button("Register"):
+        if register_user(new_user, new_pass):
+            st.success("Account created successfully! You can now log in.")
+        else:
+            st.warning("Username already exists. Try a different one.")
+
+# --- Login Page ---
+elif choice == "Login":
+    st.subheader("🔑 Login to Chatbot")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if login_user(username, password):
+            st.success(f"Welcome, {username}!")
+            st.session_state.logged_in = True
+            st.session_state.username = username
+        else:
+            st.error("Incorrect username or password.")
+
+# --- Main Chatbot (only after login) ---
+if st.session_state.logged_in:
+    st.markdown(f"### 💬 Hello **{st.session_state.username}**, how are you feeling today?")
+    user_input = st.text_input("Your message")
+
+    if user_input:
+        bot_reply = generate_response(user_input)
+        st.markdown(f"**Bot:** {bot_reply}")
