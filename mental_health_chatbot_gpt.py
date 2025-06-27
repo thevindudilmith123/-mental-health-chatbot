@@ -57,6 +57,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
+if "just_sent" not in st.session_state:
+    st.session_state.just_sent = False
 
 st.sidebar.title("🌗 Theme")
 dark_mode = st.sidebar.checkbox("Dark Mode")
@@ -116,6 +118,11 @@ if st.session_state.logged_in:
 
     messages = load_messages()
 
+    # New message just sent?
+    if st.session_state.just_sent:
+        messages = load_messages()
+        st.session_state.just_sent = False
+
     # Display chat history
     for msg in messages:
         is_you = msg["sender"] == st.session_state.username
@@ -134,7 +141,7 @@ if st.session_state.logged_in:
             """, unsafe_allow_html=True
         )
 
-    # Input field
+    # Input form
     with st.form("send_form", clear_on_submit=True):
         msg = st.text_input("Type your message")
         send = st.form_submit_button("Send")
@@ -147,7 +154,7 @@ if st.session_state.logged_in:
             "time": timestamp
         })
         save_messages(messages)
-        st.experimental_rerun()  # ✅ Safe rerun for older Streamlit versions
+        st.session_state.just_sent = True  # trigger refresh next load
 
     st.markdown("---")
     st.download_button(
