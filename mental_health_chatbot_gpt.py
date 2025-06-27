@@ -3,32 +3,31 @@ import hashlib
 import json
 import os
 import datetime
-import openai
+from openai import OpenAI
 
 # ---------------------------
-# ✅ GPT Setup (temporary test key embedded)
+# ✅ GPT Setup (OpenAI v1.x compatible)
 # ---------------------------
 DEFAULT_API_KEY = "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"
 openai_api_key = st.sidebar.text_input("🔐 OpenAI API Key", type="password", value=DEFAULT_API_KEY)
-openai.api_key = openai_api_key
+
+client = OpenAI(api_key=openai_api_key)
 
 def get_gpt_response(prompt):
     try:
-        res = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+        res = client.chat.completions.create(
+            model="gpt-4o",  # or "gpt-4o-mini"
             messages=[
                 {"role": "system", "content": "You are a supportive and empathetic mental health assistant."},
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=150
+            ]
         )
-        return res.choices[0].message["content"].strip()
+        return res.choices[0].message.content.strip()
     except Exception as e:
         return f"⚠️ GPT Error: {e}"
 
 # ---------------------------
-# ✅ Auth Functions
+# 🔐 Auth System
 # ---------------------------
 def load_users():
     if os.path.exists("users.json"):
@@ -56,7 +55,7 @@ def login_user(username, password):
     return username in users and users[username] == hash_password(password)
 
 # ---------------------------
-# ✅ Chat Storage
+# 💬 Message Storage
 # ---------------------------
 def load_messages():
     if os.path.exists("messages.json"):
@@ -69,20 +68,17 @@ def save_messages(messages):
         json.dump(messages, f)
 
 # ---------------------------
-# ✅ UI + Theme Setup
+# 🌗 Theme Setup
 # ---------------------------
-st.set_page_config(page_title="GPT Chat App", layout="centered")
+st.set_page_config(page_title="GPT Mental Health Chat", layout="centered")
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
-
-# Reset refresh state
 if "refresh" in st.session_state:
     del st.session_state["refresh"]
 
-# Dark mode toggle
 st.sidebar.markdown("🌗 **Theme**")
 dark_mode = st.sidebar.checkbox("Enable Dark Mode")
 if dark_mode:
@@ -100,7 +96,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ---------------------------
-# ✅ Login/Register
+# 🔐 Login/Register
 # ---------------------------
 st.title("💬 GPT Mental Wellness Chat")
 
@@ -113,7 +109,7 @@ if choice == "Register":
     new_pass = st.text_input("Password", type="password")
     if st.button("Register"):
         if register_user(new_user, new_pass):
-            st.success("✅ Registered! Please log in.")
+            st.success("✅ Registered! You can now log in.")
         else:
             st.warning("⚠️ Username already exists.")
 
@@ -130,13 +126,12 @@ elif choice == "Login":
             st.error("❌ Invalid login")
 
 # ---------------------------
-# ✅ Main Chat Interface
+# 💬 Main Chat Interface
 # ---------------------------
 if st.session_state.logged_in:
     messages = load_messages()
     st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
 
-    # Chat history
     for msg in messages:
         is_user = msg["sender"] == st.session_state.username
         align = "right" if is_user else "left"
@@ -164,7 +159,6 @@ if st.session_state.logged_in:
             "time": timestamp
         })
 
-        # GPT Reply
         bot_reply = get_gpt_response(user_msg)
         messages.append({
             "sender": "Bot",
@@ -174,9 +168,8 @@ if st.session_state.logged_in:
 
         save_messages(messages)
         st.session_state["refresh"] = True
-        st.stop()
+        st.stop()  # stops execution to refresh chat UI safely
 
-    # Download chat
     st.markdown("---")
     chat_data = "\n".join([f"{m['time']} - {m['sender']}: {m['text']}" for m in messages])
     st.download_button("📥 Download Chat", data=chat_data, file_name="chat.txt")
