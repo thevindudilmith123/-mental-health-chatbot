@@ -6,7 +6,7 @@ import datetime
 import openai
 
 # ---------------------------
-# 🧠 GPT Setup (test key embedded)
+# ✅ GPT Setup (temporary test key embedded)
 # ---------------------------
 DEFAULT_API_KEY = "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"
 openai_api_key = st.sidebar.text_input("🔐 OpenAI API Key", type="password", value=DEFAULT_API_KEY)
@@ -28,7 +28,7 @@ def get_gpt_response(prompt):
         return f"⚠️ GPT Error: {e}"
 
 # ---------------------------
-# 🔐 Auth Functions
+# ✅ Auth Functions
 # ---------------------------
 def load_users():
     if os.path.exists("users.json"):
@@ -56,7 +56,7 @@ def login_user(username, password):
     return username in users and users[username] == hash_password(password)
 
 # ---------------------------
-# 💬 Message Functions
+# ✅ Chat Storage
 # ---------------------------
 def load_messages():
     if os.path.exists("messages.json"):
@@ -69,7 +69,7 @@ def save_messages(messages):
         json.dump(messages, f)
 
 # ---------------------------
-# 🌗 UI + Theme Setup
+# ✅ UI + Theme Setup
 # ---------------------------
 st.set_page_config(page_title="GPT Chat App", layout="centered")
 
@@ -77,6 +77,10 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
+
+# Reset refresh state
+if "refresh" in st.session_state:
+    del st.session_state["refresh"]
 
 # Dark mode toggle
 st.sidebar.markdown("🌗 **Theme**")
@@ -96,7 +100,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ---------------------------
-# 🔐 Login/Register
+# ✅ Login/Register
 # ---------------------------
 st.title("💬 GPT Mental Wellness Chat")
 
@@ -126,7 +130,7 @@ elif choice == "Login":
             st.error("❌ Invalid login")
 
 # ---------------------------
-# 💬 Main Chat Interface
+# ✅ Main Chat Interface
 # ---------------------------
 if st.session_state.logged_in:
     messages = load_messages()
@@ -160,6 +164,7 @@ if st.session_state.logged_in:
             "time": timestamp
         })
 
+        # GPT Reply
         bot_reply = get_gpt_response(user_msg)
         messages.append({
             "sender": "Bot",
@@ -168,7 +173,8 @@ if st.session_state.logged_in:
         })
 
         save_messages(messages)
-        st.experimental_rerun()
+        st.session_state["refresh"] = True
+        st.stop()
 
     # Download chat
     st.markdown("---")
