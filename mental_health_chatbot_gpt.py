@@ -146,7 +146,7 @@ if st.session_state.logged_in:
             "time": timestamp
         })
         save_messages(messages)
-        st.experimental_rerun()
+        st.rerun()  # ✅ Streamlit-safe rerun (replaces experimental_rerun)
 
     st.markdown("---")
     st.download_button(
