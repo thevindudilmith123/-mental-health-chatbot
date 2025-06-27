@@ -52,6 +52,7 @@ def save_messages(messages):
 # ---------------------------
 
 st.set_page_config(page_title="2-Person Chat", layout="centered")
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -146,7 +147,7 @@ if st.session_state.logged_in:
             "time": timestamp
         })
         save_messages(messages)
-        st.rerun()  # ✅ Streamlit-safe rerun (replaces experimental_rerun)
+        st.experimental_rerun()  # ✅ Safe rerun for older Streamlit versions
 
     st.markdown("---")
     st.download_button(
