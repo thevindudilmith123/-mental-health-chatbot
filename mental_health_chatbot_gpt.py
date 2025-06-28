@@ -6,7 +6,7 @@ import datetime
 from openai import OpenAI
 
 # ✅ Embed your project API key here
-openai_api_key = "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"
+openai_api_key = "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"
 
 client = OpenAI(api_key=openai_api_key)
 
