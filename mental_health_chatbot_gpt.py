@@ -6,17 +6,17 @@ import datetime
 from openai import OpenAI
 
 # ---------------------------
-# ✅ GPT Setup (OpenAI v1.x compatible)
+# 🔑 Your OpenAI API Key (replace this)
 # ---------------------------
-DEFAULT_API_KEY = "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"
-openai_api_key = st.sidebar.text_input("🔐 OpenAI API Key", type="password", value=DEFAULT_API_KEY)
+openai_api_key = " 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"
 
+# Initialize OpenAI client
 client = OpenAI(api_key=openai_api_key)
 
 def get_gpt_response(prompt):
     try:
         res = client.chat.completions.create(
-            model="gpt-4o",  # or "gpt-4o-mini"
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a supportive and empathetic mental health assistant."},
                 {"role": "user", "content": prompt}
@@ -27,7 +27,7 @@ def get_gpt_response(prompt):
         return f"⚠️ GPT Error: {e}"
 
 # ---------------------------
-# 🔐 Auth System
+# 🔐 User Auth
 # ---------------------------
 def load_users():
     if os.path.exists("users.json"):
@@ -55,7 +55,7 @@ def login_user(username, password):
     return username in users and users[username] == hash_password(password)
 
 # ---------------------------
-# 💬 Message Storage
+# 💬 Chat Storage
 # ---------------------------
 def load_messages():
     if os.path.exists("messages.json"):
@@ -68,9 +68,9 @@ def save_messages(messages):
         json.dump(messages, f)
 
 # ---------------------------
-# 🌗 Theme Setup
+# 🌗 Setup
 # ---------------------------
-st.set_page_config(page_title="GPT Mental Health Chat", layout="centered")
+st.set_page_config(page_title="GPT Chat", layout="centered")
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -79,6 +79,7 @@ if "username" not in st.session_state:
 if "refresh" in st.session_state:
     del st.session_state["refresh"]
 
+# Dark mode
 st.sidebar.markdown("🌗 **Theme**")
 dark_mode = st.sidebar.checkbox("Enable Dark Mode")
 if dark_mode:
@@ -109,7 +110,7 @@ if choice == "Register":
     new_pass = st.text_input("Password", type="password")
     if st.button("Register"):
         if register_user(new_user, new_pass):
-            st.success("✅ Registered! You can now log in.")
+            st.success("✅ Registered! Please log in.")
         else:
             st.warning("⚠️ Username already exists.")
 
@@ -126,7 +127,7 @@ elif choice == "Login":
             st.error("❌ Invalid login")
 
 # ---------------------------
-# 💬 Main Chat Interface
+# 💬 Chat Interface
 # ---------------------------
 if st.session_state.logged_in:
     messages = load_messages()
@@ -146,7 +147,7 @@ if st.session_state.logged_in:
         </div>
         """, unsafe_allow_html=True)
 
-    # Input box
+    # Chat form
     with st.form("send_form", clear_on_submit=True):
         user_msg = st.text_input("Type your message")
         send = st.form_submit_button("Send")
@@ -168,8 +169,9 @@ if st.session_state.logged_in:
 
         save_messages(messages)
         st.session_state["refresh"] = True
-        st.stop()  # stops execution to refresh chat UI safely
+        st.stop()
 
+    # Download chat
     st.markdown("---")
     chat_data = "\n".join([f"{m['time']} - {m['sender']}: {m['text']}" for m in messages])
     st.download_button("📥 Download Chat", data=chat_data, file_name="chat.txt")
