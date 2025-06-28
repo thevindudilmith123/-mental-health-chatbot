@@ -9,10 +9,10 @@ import google.generativeai as genai
 # 🌟 Google Gemini Setup (session-based key)
 # ---------------------------
 if "gemini_api_key" not in st.session_state:
-    st.session_state.gemini_api_key = " AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4"
+    st.session_state.gemini_api_key = "AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4"
 
 st.session_state.gemini_api_key = st.sidebar.text_input(
-    "AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4",
+    "🔐 Gemini API Key",
     value=st.session_state.gemini_api_key,
     type="password"
 )
