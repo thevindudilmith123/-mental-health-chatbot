@@ -6,9 +6,16 @@ import datetime
 import google.generativeai as genai
 
 # ---------------------------
-# 🌟 Google Gemini Setup
+# 🌟 Google Gemini Setup (session-based key)
 # ---------------------------
-gemini_api_key = st.sidebar.text_input("AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4", type="password")
+if "gemini_api_key" not in st.session_state:
+    st.session_state.gemini_api_key = ""
+
+st.session_state.gemini_api_key = st.sidebar.text_input(
+    "AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4",
+    value=st.session_state.gemini_api_key,
+    type="password"
+)
 
 def get_gemini_response(prompt, key):
     if not key:
@@ -63,7 +70,7 @@ def save_messages(messages):
         json.dump(messages, f)
 
 # ---------------------------
-# 🌙 Theme & UI Setup
+# 🌗 Theme & UI Setup
 # ---------------------------
 st.set_page_config(page_title="Gemini Chat", layout="centered")
 
@@ -149,7 +156,7 @@ if st.session_state.logged_in:
         messages.append({"sender": st.session_state.username, "text": user_msg, "time": timestamp})
 
         # Gemini Bot Reply
-        bot_reply = get_gemini_response(user_msg, gemini_api_key)
+        bot_reply = get_gemini_response(user_msg, st.session_state.gemini_api_key)
         messages.append({"sender": "Bot", "text": bot_reply, "time": timestamp})
 
         save_messages(messages)
