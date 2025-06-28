@@ -5,12 +5,9 @@ import os
 import datetime
 from openai import OpenAI
 
-# ---------------------------
-# 🔑 Your OpenAI API Key (replace this)
-# ---------------------------
-openai_api_key = " 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"
+# ✅ Embed your project API key here
+openai_api_key = "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"
 
-# Initialize OpenAI client
 client = OpenAI(api_key=openai_api_key)
 
 def get_gpt_response(prompt):
@@ -68,7 +65,7 @@ def save_messages(messages):
         json.dump(messages, f)
 
 # ---------------------------
-# 🌗 Setup
+# 🌗 UI Setup
 # ---------------------------
 st.set_page_config(page_title="GPT Chat", layout="centered")
 
@@ -79,7 +76,7 @@ if "username" not in st.session_state:
 if "refresh" in st.session_state:
     del st.session_state["refresh"]
 
-# Dark mode
+# 🔘 Theme toggle
 st.sidebar.markdown("🌗 **Theme**")
 dark_mode = st.sidebar.checkbox("Enable Dark Mode")
 if dark_mode:
@@ -97,7 +94,7 @@ else:
     """, unsafe_allow_html=True)
 
 # ---------------------------
-# 🔐 Login/Register
+# 🔐 Login/Register UI
 # ---------------------------
 st.title("💬 GPT Mental Wellness Chat")
 
@@ -147,7 +144,7 @@ if st.session_state.logged_in:
         </div>
         """, unsafe_allow_html=True)
 
-    # Chat form
+    # Input message
     with st.form("send_form", clear_on_submit=True):
         user_msg = st.text_input("Type your message")
         send = st.form_submit_button("Send")
@@ -171,7 +168,6 @@ if st.session_state.logged_in:
         st.session_state["refresh"] = True
         st.stop()
 
-    # Download chat
     st.markdown("---")
     chat_data = "\n".join([f"{m['time']} - {m['sender']}: {m['text']}" for m in messages])
     st.download_button("📥 Download Chat", data=chat_data, file_name="chat.txt")
