@@ -6,7 +6,7 @@ import datetime
 import google.generativeai as genai
 
 # ---------------------------
-# 🌟 Google Gemini Setup (session-based key)
+# 🌟 Gemini Setup
 # ---------------------------
 if "gemini_api_key" not in st.session_state:
     st.session_state.gemini_api_key = "AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4"
@@ -22,8 +22,9 @@ def get_gemini_response(prompt, key):
         return "❗ No API key provided."
     try:
         genai.configure(api_key=key)
-        model = genai.GenerativeModel("gemini-pro")
-        response = model.generate_content(prompt)
+        model = genai.GenerativeModel(model_name="gemini-pro")
+        chat = model.start_chat()
+        response = chat.send_message(prompt)
         return response.text
     except Exception as e:
         return f"⚠️ Error: {e}"
@@ -57,7 +58,7 @@ def login_user(username, password):
     return username in users and users[username] == hash_password(password)
 
 # ---------------------------
-# 💬 Message Functions
+# 💬 Message Handling
 # ---------------------------
 def load_messages():
     if os.path.exists("messages.json"):
@@ -70,9 +71,9 @@ def save_messages(messages):
         json.dump(messages, f)
 
 # ---------------------------
-# 🌗 Theme & UI Setup
+# 🌙 UI & Layout Setup
 # ---------------------------
-st.set_page_config(page_title="Gemini Chat", layout="centered")
+st.set_page_config(page_title="Gemini Chatbot", layout="centered")
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -92,7 +93,7 @@ if dark_mode:
     """, unsafe_allow_html=True)
 
 # ---------------------------
-# 🔐 Auth Section
+# 🔐 Auth System
 # ---------------------------
 st.title("🤖 Gemini Mental Health Chat")
 
@@ -105,7 +106,7 @@ if choice == "Register":
     new_pass = st.text_input("Password", type="password")
     if st.button("Register"):
         if register_user(new_user, new_pass):
-            st.success("✅ Account created! Now log in.")
+            st.success("✅ Account created! You can now log in.")
         else:
             st.warning("⚠️ Username already exists.")
 elif choice == "Login":
@@ -121,7 +122,7 @@ elif choice == "Login":
             st.error("❌ Invalid credentials.")
 
 # ---------------------------
-# 💬 Chat Interface
+# 💬 Chat Section
 # ---------------------------
 if st.session_state.logged_in:
     st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
@@ -131,6 +132,7 @@ if st.session_state.logged_in:
         messages = load_messages()
         st.session_state.just_sent = False
 
+    # Show messages
     for msg in messages:
         is_you = msg["sender"] == st.session_state.username
         align = "right" if is_you else "left"
@@ -146,7 +148,7 @@ if st.session_state.logged_in:
         </div>
         """, unsafe_allow_html=True)
 
-    # Input
+    # Input form
     with st.form("send_form", clear_on_submit=True):
         user_msg = st.text_input("Type your message")
         send = st.form_submit_button("Send")
@@ -155,12 +157,12 @@ if st.session_state.logged_in:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         messages.append({"sender": st.session_state.username, "text": user_msg, "time": timestamp})
 
-        # Gemini Bot Reply
+        # Bot response from Gemini
         bot_reply = get_gemini_response(user_msg, st.session_state.gemini_api_key)
         messages.append({"sender": "Bot", "text": bot_reply, "time": timestamp})
 
         save_messages(messages)
-        st.session_state.just_sent = True  # refresh on next render
+        st.session_state.just_sent = True
 
     st.markdown("---")
     st.download_button(
