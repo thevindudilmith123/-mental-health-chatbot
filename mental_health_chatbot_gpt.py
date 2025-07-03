@@ -18,28 +18,31 @@ st.session_state.gemini_api_key = st.sidebar.text_input(
 def call_gemini_api(prompt, key):
     if not key:
         return "❗ No API key provided."
-    
-    endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-    headers = {
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "contents": [
-            {
-                "parts": [{"text": prompt}]
-            }
-        ]
-    }
+
     try:
-        response = requests.post(
-            f"{endpoint}?key={key}",
-            headers=headers,
-            json=payload
-        )
+        url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
+        headers = {
+            "Content-Type": "application/json"
+        }
+        data = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }
+            ]
+        }
+        response = requests.post(f"{url}?key={key}", headers=headers, json=data)
         result = response.json()
-        return result["candidates"][0]["content"]["parts"][0]["text"]
+
+        if "candidates" in result:
+            return result["candidates"][0]["content"]["parts"][0]["text"]
+        elif "error" in result:
+            return f"❌ Gemini Error: {result['error'].get('message', 'Unknown error')}"
+        else:
+            return "⚠️ Unexpected response from Gemini API."
     except Exception as e:
-        return f"⚠️ Error: {e}"
+        return f"⚠️ Exception: {e}"
 
 # ---------------------------
 # 🔐 User Auth & UI Setup
@@ -53,7 +56,6 @@ if "username" not in st.session_state:
 if "just_sent" not in st.session_state:
     st.session_state.just_sent = False
 
-# User Auth (same as before)
 def load_users():
     if os.path.exists("users.json"):
         with open("users.json", "r") as f:
@@ -79,7 +81,6 @@ def login_user(username, password):
     users = load_users()
     return username in users and users[username] == hash_password(password)
 
-# Messages
 def load_messages():
     if os.path.exists("messages.json"):
         with open("messages.json", "r") as f:
@@ -90,7 +91,6 @@ def save_messages(messages):
     with open("messages.json", "w") as f:
         json.dump(messages, f)
 
-# Theme
 st.sidebar.title("🌗 Theme")
 dark_mode = st.sidebar.checkbox("Dark Mode")
 if dark_mode:
@@ -100,7 +100,6 @@ if dark_mode:
     </style>
     """, unsafe_allow_html=True)
 
-# Auth Menu
 st.title("🤖 Gemini REST Chatbot")
 menu = ["Login", "Register"]
 choice = st.sidebar.selectbox("🔐 Menu", menu)
@@ -114,7 +113,6 @@ if choice == "Register":
             st.success("✅ Registered successfully!")
         else:
             st.warning("⚠️ Username exists.")
-
 elif choice == "Login":
     st.subheader("🔑 Login")
     username = st.text_input("Username")
@@ -127,7 +125,6 @@ elif choice == "Login":
         else:
             st.error("❌ Invalid credentials.")
 
-# Chat UI
 if st.session_state.logged_in:
     st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
     messages = load_messages()
@@ -136,7 +133,6 @@ if st.session_state.logged_in:
         messages = load_messages()
         st.session_state.just_sent = False
 
-    # Show chat history
     for msg in messages:
         is_you = msg["sender"] == st.session_state.username
         align = "right" if is_you else "left"
