@@ -33,7 +33,6 @@ if user_input:
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             response = generator(user_input)[0]["generated_text"]
-            cleaned = response[len(user_input):].strip().split("
-")[0]
+            cleaned = response[len(user_input):].strip().split("\n")[0]
             st.markdown(cleaned)
             st.session_state.messages.append({"role": "assistant", "content": cleaned})
