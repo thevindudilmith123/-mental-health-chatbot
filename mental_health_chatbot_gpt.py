@@ -3,35 +3,57 @@ import hashlib
 import json
 import os
 import datetime
-import google.generativeai as genai
+import requests
 
 # ---------------------------
-# 🌟 Gemini Setup
+# 🔐 Gemini REST Setup
 # ---------------------------
 if "gemini_api_key" not in st.session_state:
     st.session_state.gemini_api_key = "AIzaSyBMmwmAQ0Y4y_1mpMXlGouy_O6mgSsayy4"
 
 st.session_state.gemini_api_key = st.sidebar.text_input(
-    "🔐 Gemini API Key",
-    value=st.session_state.gemini_api_key,
-    type="password"
+    "🔐 Gemini API Key", value=st.session_state.gemini_api_key, type="password"
 )
 
-def get_gemini_response(prompt, key):
+def call_gemini_api(prompt, key):
     if not key:
         return "❗ No API key provided."
+    
+    endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "contents": [
+            {
+                "parts": [{"text": prompt}]
+            }
+        ]
+    }
     try:
-        genai.configure(api_key=key)
-        model = genai.GenerativeModel(model_name="gemini-pro")
-        chat = model.start_chat()
-        response = chat.send_message(prompt)
-        return response.text
+        response = requests.post(
+            f"{endpoint}?key={key}",
+            headers=headers,
+            json=payload
+        )
+        result = response.json()
+        return result["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         return f"⚠️ Error: {e}"
 
 # ---------------------------
-# 🔐 User Authentication
+# 🔐 User Auth & UI Setup
 # ---------------------------
+st.set_page_config(page_title="Gemini REST Chat", layout="centered")
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if "just_sent" not in st.session_state:
+    st.session_state.just_sent = False
+
+# User Auth (same as before)
 def load_users():
     if os.path.exists("users.json"):
         with open("users.json", "r") as f:
@@ -57,9 +79,7 @@ def login_user(username, password):
     users = load_users()
     return username in users and users[username] == hash_password(password)
 
-# ---------------------------
-# 💬 Message Handling
-# ---------------------------
+# Messages
 def load_messages():
     if os.path.exists("messages.json"):
         with open("messages.json", "r") as f:
@@ -70,45 +90,31 @@ def save_messages(messages):
     with open("messages.json", "w") as f:
         json.dump(messages, f)
 
-# ---------------------------
-# 🌙 UI & Layout Setup
-# ---------------------------
-st.set_page_config(page_title="Gemini Chatbot", layout="centered")
-
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "just_sent" not in st.session_state:
-    st.session_state.just_sent = False
-
+# Theme
 st.sidebar.title("🌗 Theme")
 dark_mode = st.sidebar.checkbox("Dark Mode")
 if dark_mode:
     st.markdown("""
-        <style>
-        body { background-color: #121212; color: white; }
-        .bubble { background-color: #2f2f2f; }
-        </style>
+    <style>
+    body { background-color: #121212; color: white; }
+    </style>
     """, unsafe_allow_html=True)
 
-# ---------------------------
-# 🔐 Auth System
-# ---------------------------
-st.title("🤖 Gemini Mental Health Chat")
-
+# Auth Menu
+st.title("🤖 Gemini REST Chatbot")
 menu = ["Login", "Register"]
 choice = st.sidebar.selectbox("🔐 Menu", menu)
 
 if choice == "Register":
-    st.subheader("📝 Create Account")
+    st.subheader("📝 Register")
     new_user = st.text_input("Username")
     new_pass = st.text_input("Password", type="password")
     if st.button("Register"):
         if register_user(new_user, new_pass):
-            st.success("✅ Account created! You can now log in.")
+            st.success("✅ Registered successfully!")
         else:
-            st.warning("⚠️ Username already exists.")
+            st.warning("⚠️ Username exists.")
+
 elif choice == "Login":
     st.subheader("🔑 Login")
     username = st.text_input("Username")
@@ -117,13 +123,11 @@ elif choice == "Login":
         if login_user(username, password):
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.success(f"✅ Welcome, {username}!")
+            st.success(f"Welcome, {username}!")
         else:
             st.error("❌ Invalid credentials.")
 
-# ---------------------------
-# 💬 Chat Section
-# ---------------------------
+# Chat UI
 if st.session_state.logged_in:
     st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
     messages = load_messages()
@@ -132,11 +136,12 @@ if st.session_state.logged_in:
         messages = load_messages()
         st.session_state.just_sent = False
 
+    # Show chat history
     for msg in messages:
         is_you = msg["sender"] == st.session_state.username
         align = "right" if is_you else "left"
         bg = "#cce5ff" if is_you else "#f1f0f0"
-        icon = "🧍‍♂️" if is_you else ("🤖" if msg["sender"] == "Bot" else "👤")
+        icon = "🧍‍♂️" if is_you else "🤖"
 
         st.markdown(f"""
         <div style='text-align:{align}; margin-bottom:10px;'>
@@ -155,7 +160,7 @@ if st.session_state.logged_in:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         messages.append({"sender": st.session_state.username, "text": user_msg, "time": timestamp})
 
-        bot_reply = get_gemini_response(user_msg, st.session_state.gemini_api_key)
+        bot_reply = call_gemini_api(user_msg, st.session_state.gemini_api_key)
         messages.append({"sender": "Bot", "text": bot_reply, "time": timestamp})
 
         save_messages(messages)
@@ -163,7 +168,7 @@ if st.session_state.logged_in:
 
     st.markdown("---")
     st.download_button(
-        label="📥 Download Chat",
+        "📥 Download Chat",
         data="\n".join([f"{m['time']} - {m['sender']}: {m['text']}" for m in messages]),
-        file_name="conversation.txt"
+        file_name="chat_history.txt"
     )
