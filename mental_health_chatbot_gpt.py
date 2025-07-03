@@ -132,7 +132,6 @@ if st.session_state.logged_in:
         messages = load_messages()
         st.session_state.just_sent = False
 
-    # Show messages
     for msg in messages:
         is_you = msg["sender"] == st.session_state.username
         align = "right" if is_you else "left"
@@ -148,7 +147,6 @@ if st.session_state.logged_in:
         </div>
         """, unsafe_allow_html=True)
 
-    # Input form
     with st.form("send_form", clear_on_submit=True):
         user_msg = st.text_input("Type your message")
         send = st.form_submit_button("Send")
@@ -157,7 +155,6 @@ if st.session_state.logged_in:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         messages.append({"sender": st.session_state.username, "text": user_msg, "time": timestamp})
 
-        # Bot response from Gemini
         bot_reply = get_gemini_response(user_msg, st.session_state.gemini_api_key)
         messages.append({"sender": "Bot", "text": bot_reply, "time": timestamp})
 
