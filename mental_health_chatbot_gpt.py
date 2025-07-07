@@ -9,7 +9,7 @@ st.write("Free, open-source LLM powered by Together.ai. No OpenAI or Gemini need
 
 # API Key input
 if "together_api_key" not in st.session_state:
-    st.session_state.together_api_key = ""
+    st.session_state.together_api_key = "f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"
 
 st.session_state.together_api_key = st.sidebar.text_input(
     "🔐 Together.ai API Key", value=st.session_state.together_api_key, type="password"
