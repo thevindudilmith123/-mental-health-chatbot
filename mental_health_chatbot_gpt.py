@@ -99,7 +99,7 @@ if user_input:
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             headers = {
-                "Authorization": "f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1",
+                "Authorization": "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1",
                 "Content-Type": "application/json"
             }
             payload = {
