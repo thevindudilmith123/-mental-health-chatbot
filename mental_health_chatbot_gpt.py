@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import time
-import datetime
 import hashlib
 import json
 from fpdf import FPDF
@@ -67,19 +66,12 @@ if not st.session_state.logged_in:
             else:
                 st.warning("⚠️ Username already exists.")
 
-# Settings (hidden)
-if st.session_state.logged_in:
-    with st.sidebar.expander("⚙️ Settings", expanded=False):
-        st.session_state.together_api_key = st.text_input("🔐 Together.ai API Key", type="password")
-        model = st.selectbox("🤖 Choose a model", [
-            "mistralai/Mistral-7B-Instruct-v0.1",
-            "meta-llama/Llama-2-7b-chat-hf",
-            "NousResearch/Hermes-2-Pro-Mistral-7B"
-        ])
-else:
+# Chat UI
+if not st.session_state.logged_in:
     st.stop()
 
-# Chat UI
+model = "mistralai/Mistral-7B-Instruct-v0.1"
+
 st.title(f"🧠 Hello, {st.session_state.username}")
 st.subheader("💬 How are you feeling?")
 mood = st.radio("", ["🙂 Happy", "😔 Sad", "😠 Angry", "😰 Anxious", "💬 Just Chat"], horizontal=True)
@@ -104,11 +96,10 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Call Together API
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             headers = {
-                "Authorization": f"Bearer {st.session_state.together_api_key}",
+                "Authorization": "f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1",
                 "Content-Type": "application/json"
             }
             payload = {
@@ -131,30 +122,3 @@ if user_input:
                 time.sleep(0.01)
             msg_box.markdown(full)
             st.session_state.messages.append({"role": "assistant", "content": reply})
-
-# PDF export
-def save_chat_as_pdf():
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt="Chat History", ln=True, align="C")
-    pdf.ln(10)
-    for msg in st.session_state.messages:
-        role = "You" if msg["role"] == "user" else "Bot"
-        text = f"{role}: {msg['content']}"
-        pdf.multi_cell(0, 10, txt=text)
-        pdf.ln(1)
-    filename = f"{st.session_state.username}_chat.pdf"
-    pdf.output(filename)
-    return filename
-
-if len(st.session_state.messages) > 0:
-    with open("chat_history.txt", "w") as f:
-        for m in st.session_state.messages:
-            f.write(f"{m['role']}: {m['content']}\n")
-    with open("chat_history.txt", "r") as f:
-        st.download_button("📥 Download Chat (.txt)", f, file_name="chat_history.txt")
-    if st.button("📄 Export Chat as PDF"):
-        pdf_file = save_chat_as_pdf()
-        with open(pdf_file, "rb") as f:
-            st.download_button("✅ Download PDF", f, file_name=pdf_file)
