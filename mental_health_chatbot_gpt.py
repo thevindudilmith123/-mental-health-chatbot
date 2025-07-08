@@ -39,6 +39,7 @@ def login_user(username, password):
     users = load_users()
     return username in users and users[username] == hash_password(password)
 
+# Session state
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -71,16 +72,11 @@ else:
 if not st.session_state.logged_in:
     st.stop()
 
-# Together.ai Settings
-with st.sidebar.expander("⚙️ API Settings", expanded=False):
-    api_key = st.text_input("Together.ai API Key", type="password")
-    model = st.selectbox("Model", [
-        "mistralai/Mistral-7B-Instruct-v0.1",
-        "meta-llama/Llama-2-7b-chat-hf",
-        "NousResearch/Hermes-2-Pro-Mistral-7B"
-    ])
+# ✅ Hardcoded API Key
+api_key = "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"  # ← Replace this with your real API key
+model = "mistralai/Mistral-7B-Instruct-v0.1"
 
-# Personality
+# Personality switcher
 personality = st.selectbox("🤖 Bot Personality", ["Therapist", "Motivator", "Coach", "Friend"])
 intro_messages = {
     "Therapist": "You are a caring mental health therapist. Provide supportive, calm, and reflective responses.",
@@ -92,6 +88,7 @@ intro_messages = {
 if not any(m['role'] == 'system' for m in st.session_state.messages):
     st.session_state.messages.append({"role": "system", "content": intro_messages[personality]})
 
+# Mood input
 st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
 mood = st.radio("🧠 Mood", ["🙂 Happy", "😔 Sad", "😠 Angry", "😰 Anxious", "💬 Just Chat"], horizontal=True)
 mood_prompts = {
@@ -105,20 +102,23 @@ default_prompt = mood_prompts[mood]
 if mood != "💬 Just Chat":
     st.session_state.moods.append(mood)
 
+# Show past messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
+# Chat input
 user_input = st.chat_input("Type here..." if mood == "💬 Just Chat" else default_prompt)
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
+    # GPT bot response
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             headers = {
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": api_key,
                 "Content-Type": "application/json"
             }
             payload = {
@@ -142,12 +142,13 @@ if user_input:
             box.markdown(full)
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# Save per-user chat
+# Save user chat
 os.makedirs("user_logs", exist_ok=True)
 with open(f"user_logs/{st.session_state.username}_chat.txt", "w") as f:
     for m in st.session_state.messages:
         f.write(f"{m['role']}: {m['content']}\n")
 
+# Export to PDF
 def export_pdf():
     pdf = FPDF()
     pdf.add_page()
