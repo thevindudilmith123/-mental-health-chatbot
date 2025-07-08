@@ -3,18 +3,16 @@ import requests
 import time
 import hashlib
 import json
+import os
 import pandas as pd
 from fpdf import FPDF
 
-# Set up the page
+# Config
 st.set_page_config(page_title="Together AI Chatbot", layout="wide")
-
-# Dark/light theme toggle
 theme = st.sidebar.radio("🌗 Theme", ["Light", "Dark"])
 if theme == "Dark":
     st.markdown("<style>body { background-color: #1e1e1e; color: white; }</style>", unsafe_allow_html=True)
 
-# User authentication system
 def load_users():
     try:
         with open("users.json", "r") as f:
@@ -41,7 +39,6 @@ def login_user(username, password):
     users = load_users()
     return username in users and users[username] == hash_password(password)
 
-# Session states
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -51,12 +48,12 @@ if "messages" not in st.session_state:
 if "moods" not in st.session_state:
     st.session_state.moods = []
 
-# Login/Register UI
+# Auth
 st.sidebar.title("🔐 Access")
-mode = st.sidebar.radio("Choose", ["Login", "Register"])
+auth_mode = st.sidebar.radio("Choose", ["Login", "Register"])
 uname = st.sidebar.text_input("Username")
 pword = st.sidebar.text_input("Password", type="password")
-if mode == "Login":
+if auth_mode == "Login":
     if st.sidebar.button("Login"):
         if login_user(uname, pword):
             st.session_state.logged_in = True
@@ -71,17 +68,30 @@ else:
         else:
             st.warning("⚠️ Username already exists.")
 
-# Block if not logged in
 if not st.session_state.logged_in:
     st.stop()
 
-# ✅ Hardcoded Together.ai API Key
-API_KEY = "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"  # <-- Replace with your real key
+# Together.ai Settings
+with st.sidebar.expander("⚙️ API Settings", expanded=False):
+    api_key = st.text_input("Together.ai API Key", type="password")
+    model = st.selectbox("Model", [
+        "mistralai/Mistral-7B-Instruct-v0.1",
+        "meta-llama/Llama-2-7b-chat-hf",
+        "NousResearch/Hermes-2-Pro-Mistral-7B"
+    ])
 
-# Use a default model
-MODEL = "mistralai/Mistral-7B-Instruct-v0.1"
+# Personality
+personality = st.selectbox("🤖 Bot Personality", ["Therapist", "Motivator", "Coach", "Friend"])
+intro_messages = {
+    "Therapist": "You are a caring mental health therapist. Provide supportive, calm, and reflective responses.",
+    "Motivator": "You are a high-energy motivational coach. Be positive, encouraging, and goal-focused.",
+    "Coach": "You are a practical personal coach. Give advice and ask helpful questions.",
+    "Friend": "You are a supportive best friend. Talk informally and warmly."
+}
 
-# Mood buttons
+if not any(m['role'] == 'system' for m in st.session_state.messages):
+    st.session_state.messages.append({"role": "system", "content": intro_messages[personality]})
+
 st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
 mood = st.radio("🧠 Mood", ["🙂 Happy", "😔 Sad", "😠 Angry", "😰 Anxious", "💬 Just Chat"], horizontal=True)
 mood_prompts = {
@@ -95,27 +105,24 @@ default_prompt = mood_prompts[mood]
 if mood != "💬 Just Chat":
     st.session_state.moods.append(mood)
 
-# Show previous chat messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Chat input
 user_input = st.chat_input("Type here..." if mood == "💬 Just Chat" else default_prompt)
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # GPT bot reply using Together.ai
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             headers = {
-                "Authorization": API_KEY,
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": MODEL,
+                "model": model,
                 "max_tokens": 250,
                 "temperature": 0.7,
                 "messages": st.session_state.messages
@@ -126,7 +133,6 @@ if user_input:
             else:
                 reply = f"❌ Error: {res.status_code} - {res.text}"
 
-            # Typing effect
             full = ""
             box = st.empty()
             for char in reply:
@@ -136,7 +142,12 @@ if user_input:
             box.markdown(full)
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# PDF Export function
+# Save per-user chat
+os.makedirs("user_logs", exist_ok=True)
+with open(f"user_logs/{st.session_state.username}_chat.txt", "w") as f:
+    for m in st.session_state.messages:
+        f.write(f"{m['role']}: {m['content']}\n")
+
 def export_pdf():
     pdf = FPDF()
     pdf.add_page()
@@ -145,13 +156,11 @@ def export_pdf():
     pdf.ln(10)
     for m in st.session_state.messages:
         who = "You" if m["role"] == "user" else "Bot"
-        text = f"{who}: {m['content']}"
-        pdf.multi_cell(0, 10, txt=text)
+        pdf.multi_cell(0, 10, txt=f"{who}: {m['content']}")
     filename = f"{st.session_state.username}_chat.pdf"
     pdf.output(filename)
     return filename
 
-# Mood Chart and PDF buttons
 col1, col2 = st.columns(2)
 with col1:
     if st.button("📄 Export PDF"):
