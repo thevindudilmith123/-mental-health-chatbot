@@ -7,12 +7,62 @@ import os
 import pandas as pd
 from fpdf import FPDF
 
-# Config
-st.set_page_config(page_title="Together AI Chatbot", layout="wide")
-theme = st.sidebar.radio("🌗 Theme", ["Light", "Dark"])
-if theme == "Dark":
-    st.markdown("<style>body { background-color: #1e1e1e; color: white; }</style>", unsafe_allow_html=True)
+st.set_page_config(page_title="Chatbot | Sinhala-English", layout="wide")
 
+# 🌐 Language Toggle
+lang = st.sidebar.selectbox("🌐 Language", ["English", "සිංහල"])
+
+# UI Translations
+labels = {
+    "English": {
+        "login": "Login",
+        "register": "Register",
+        "username": "Username",
+        "password": "Password",
+        "mood": "🧠 Mood",
+        "personalities": ["Therapist", "Motivator", "Coach", "Friend"],
+        "moods": ["🙂 Happy", "😔 Sad", "😠 Angry", "😰 Anxious", "💬 Just Chat"],
+        "prompts": {
+            "🙂 Happy": "I'm feeling 😊 happy today!",
+            "😔 Sad": "I'm feeling 😢 a bit down.",
+            "😠 Angry": "I'm feeling 😠 frustrated.",
+            "😰 Anxious": "I'm feeling 😰 anxious lately.",
+            "💬 Just Chat": "Let's chat about anything."
+        },
+        "input": "Type here...",
+        "hello": "Hello",
+        "export": "📄 Export PDF",
+        "mood_stats": "📈 View Mood Stats"
+    },
+    "සිංහල": {
+        "login": "පිවිසෙන්න",
+        "register": "ලියාපදිංචි වන්න",
+        "username": "පරිශීලක නාමය",
+        "password": "මුරපදය",
+        "mood": "🧠 මනෝභාවය",
+        "personalities": ["මනෝවෙදක", "ප්‍රේරකයා", "පුහුණුකරු", "මිතුරා"],
+        "moods": ["🙂 සතුටුයි", "😔 දුක්වෙයි", "😠 කෝපයි", "😰 කනස්සල්ලෙන්", "💬 සාමාන්‍ය කතාබසය"],
+        "prompts": {
+            "🙂 සතුටුයි": "මම අද 😊 සතුටින් සිටිනවා.",
+            "😔 දුක්වෙයි": "මම අද 😢 දුකින් පිරී ඇත.",
+            "😠 කෝපයි": "මම අද 😠 කෝපයෙන් පිරී ඇත.",
+            "😰 කනස්සල්ලෙන්": "මට අද 😰 කනස්සල්ලක් තියෙනවා.",
+            "💬 සාමාන්‍ය කතාබසය": "ඕනෑම දෙයක් ගැන කතා කරමු."
+        },
+        "input": "ඔබට කිව යුතු දේ මෙහි ටයිප් කරන්න...",
+        "hello": "හෙලෝ",
+        "export": "📄 PDF ලෙස සුරකින්න",
+        "mood_stats": "📈 මනෝභාව ගණන්"
+    }
+}
+
+L = labels[lang]
+
+# 🔐 API Key
+api_key = "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"  # << replace with your real Together.ai key
+model = "mistralai/Mistral-7B-Instruct-v0.1"
+
+# User auth
 def load_users():
     try:
         with open("users.json", "r") as f:
@@ -39,7 +89,7 @@ def login_user(username, password):
     users = load_users()
     return username in users and users[username] == hash_password(password)
 
-# Session state
+# Session
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -49,74 +99,66 @@ if "messages" not in st.session_state:
 if "moods" not in st.session_state:
     st.session_state.moods = []
 
-# Auth
-st.sidebar.title("🔐 Access")
-auth_mode = st.sidebar.radio("Choose", ["Login", "Register"])
-uname = st.sidebar.text_input("Username")
-pword = st.sidebar.text_input("Password", type="password")
-if auth_mode == "Login":
-    if st.sidebar.button("Login"):
+# Login / Register UI
+st.sidebar.title("🔐 " + ("Access" if lang == "English" else "පරිශීලක පිවිසුම"))
+mode = st.sidebar.radio("Choose", [L["login"], L["register"]])
+uname = st.sidebar.text_input(L["username"])
+pword = st.sidebar.text_input(L["password"], type="password")
+if mode == L["login"]:
+    if st.sidebar.button(L["login"]):
         if login_user(uname, pword):
             st.session_state.logged_in = True
             st.session_state.username = uname
             st.success("✅ Logged in!")
         else:
-            st.error("❌ Invalid username or password.")
+            st.error("❌ Invalid credentials.")
 else:
-    if st.sidebar.button("Register"):
+    if st.sidebar.button(L["register"]):
         if register_user(uname, pword):
-            st.success("✅ Registered successfully.")
+            st.success("✅ Registered!")
         else:
-            st.warning("⚠️ Username already exists.")
+            st.warning("⚠️ Username exists.")
 
 if not st.session_state.logged_in:
     st.stop()
 
-# ✅ Hardcoded API Key
-api_key = "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"  # ← Replace this with your real API key
-model = "mistralai/Mistral-7B-Instruct-v0.1"
-
-# Personality switcher
-personality = st.selectbox("🤖 Bot Personality", ["Therapist", "Motivator", "Coach", "Friend"])
-intro_messages = {
-    "Therapist": "You are a caring mental health therapist. Provide supportive, calm, and reflective responses.",
-    "Motivator": "You are a high-energy motivational coach. Be positive, encouraging, and goal-focused.",
-    "Coach": "You are a practical personal coach. Give advice and ask helpful questions.",
-    "Friend": "You are a supportive best friend. Talk informally and warmly."
+# Personality selection
+persona = st.selectbox("🤖 " + ("Bot Personality" if lang == "English" else "චරිතය"), L["personalities"])
+persona_prompts = {
+    "Therapist": "You are a caring mental health therapist.",
+    "මනෝවෙදක": "ඔබ මනෝසංවර්ධනයට සහය වන්නාවූ වෛද්‍යවරයෙකි.",
+    "Motivator": "You are a motivational coach.",
+    "ප්‍රේරකයා": "ඔබ උද්යෝගී චරිතයකි.",
+    "Coach": "You are a practical life coach.",
+    "පුහුණුකරු": "ඔබ උපදෙස් සහ සහය දෙන්නෙකුයි.",
+    "Friend": "You are a friendly companion.",
+    "මිතුරා": "ඔබ හිතවත් මිතුරෙකි."
 }
 
 if not any(m['role'] == 'system' for m in st.session_state.messages):
-    st.session_state.messages.append({"role": "system", "content": intro_messages[personality]})
+    st.session_state.messages.append({"role": "system", "content": persona_prompts.get(persona, "You are helpful.")})
 
-# Mood input
-st.markdown(f"### 👋 Hello, **{st.session_state.username}**")
-mood = st.radio("🧠 Mood", ["🙂 Happy", "😔 Sad", "😠 Angry", "😰 Anxious", "💬 Just Chat"], horizontal=True)
-mood_prompts = {
-    "🙂 Happy": "I'm feeling 😊 happy today!",
-    "😔 Sad": "I'm feeling 😢 a bit down.",
-    "😠 Angry": "I'm feeling 😠 frustrated.",
-    "😰 Anxious": "I'm feeling 😰 anxious lately.",
-    "💬 Just Chat": "Let's chat about anything."
-}
-default_prompt = mood_prompts[mood]
-if mood != "💬 Just Chat":
+# Mood selection
+st.markdown(f"### 👋 {L['hello']}, **{st.session_state.username}**")
+mood = st.radio(L["mood"], L["moods"], horizontal=True)
+prompt = L["prompts"][mood]
+if mood != L["moods"][-1]:
     st.session_state.moods.append(mood)
 
-# Show past messages
+# Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 # Chat input
-user_input = st.chat_input("Type here..." if mood == "💬 Just Chat" else default_prompt)
+user_input = st.chat_input(L["input"] if mood == L["moods"][-1] else prompt)
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # GPT bot response
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
+        with st.spinner("Thinking..." if lang == "English" else "සිතමින්..."):
             headers = {
                 "Authorization": api_key,
                 "Content-Type": "application/json"
@@ -142,13 +184,13 @@ if user_input:
             box.markdown(full)
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# Save user chat
+# Save chat logs
 os.makedirs("user_logs", exist_ok=True)
 with open(f"user_logs/{st.session_state.username}_chat.txt", "w") as f:
     for m in st.session_state.messages:
         f.write(f"{m['role']}: {m['content']}\n")
 
-# Export to PDF
+# Export PDF
 def export_pdf():
     pdf = FPDF()
     pdf.add_page()
@@ -164,12 +206,12 @@ def export_pdf():
 
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("📄 Export PDF"):
+    if st.button(L["export"]):
         file = export_pdf()
         with open(file, "rb") as f:
-            st.download_button("Download PDF", f, file_name=file)
+            st.download_button(L["export"], f, file_name=file)
 with col2:
-    if st.button("📈 View Mood Stats") and st.session_state.moods:
+    if st.button(L["mood_stats"]) and st.session_state.moods:
         df = pd.DataFrame(st.session_state.moods, columns=["Mood"])
         mood_count = df["Mood"].value_counts()
         st.bar_chart(mood_count)
