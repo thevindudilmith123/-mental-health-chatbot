@@ -12,15 +12,11 @@ st.set_page_config(page_title="Chatbot | Sinhala-English", layout="wide")
 # 🌐 Language Toggle
 lang = st.sidebar.selectbox("🌐 Language", ["English", "සිංහල"])
 
-# UI Translations
+# UI Labels
 labels = {
     "English": {
-        "login": "Login",
-        "register": "Register",
-        "username": "Username",
-        "password": "Password",
-        "mood": "🧠 Mood",
-        "personalities": ["Therapist", "Motivator", "Coach", "Friend"],
+        "login": "Login", "register": "Register", "username": "Username", "password": "Password",
+        "mood": "🧠 Mood", "personalities": ["Therapist", "Motivator", "Coach", "Friend"],
         "moods": ["🙂 Happy", "😔 Sad", "😠 Angry", "😰 Anxious", "💬 Just Chat"],
         "prompts": {
             "🙂 Happy": "I'm feeling 😊 happy today!",
@@ -29,18 +25,11 @@ labels = {
             "😰 Anxious": "I'm feeling 😰 anxious lately.",
             "💬 Just Chat": "Let's chat about anything."
         },
-        "input": "Type here...",
-        "hello": "Hello",
-        "export": "📄 Export PDF",
-        "mood_stats": "📈 View Mood Stats"
+        "input": "Type here...", "hello": "Hello", "export": "📄 Export PDF", "mood_stats": "📈 View Mood Stats"
     },
     "සිංහල": {
-        "login": "පිවිසෙන්න",
-        "register": "ලියාපදිංචි වන්න",
-        "username": "පරිශීලක නාමය",
-        "password": "මුරපදය",
-        "mood": "🧠 මනෝභාවය",
-        "personalities": ["මනෝවෙදක", "ප්‍රේරකයා", "පුහුණුකරු", "මිතුරා"],
+        "login": "පිවිසෙන්න", "register": "ලියාපදිංචි වන්න", "username": "පරිශීලක නාමය", "password": "මුරපදය",
+        "mood": "🧠 මනෝභාවය", "personalities": ["මනෝවෙදක", "ප්‍රේරකයා", "පුහුණුකරු", "මිතුරා"],
         "moods": ["🙂 සතුටුයි", "😔 දුක්වෙයි", "😠 කෝපයි", "😰 කනස්සල්ලෙන්", "💬 සාමාන්‍ය කතාබසය"],
         "prompts": {
             "🙂 සතුටුයි": "මම අද 😊 සතුටින් සිටිනවා.",
@@ -49,20 +38,17 @@ labels = {
             "😰 කනස්සල්ලෙන්": "මට අද 😰 කනස්සල්ලක් තියෙනවා.",
             "💬 සාමාන්‍ය කතාබසය": "ඕනෑම දෙයක් ගැන කතා කරමු."
         },
-        "input": "ඔබට කිව යුතු දේ මෙහි ටයිප් කරන්න...",
-        "hello": "හෙලෝ",
-        "export": "📄 PDF ලෙස සුරකින්න",
-        "mood_stats": "📈 මනෝභාව ගණන්"
+        "input": "ඔබට කිව යුතු දේ මෙහි ටයිප් කරන්න...", "hello": "හෙලෝ",
+        "export": "📄 PDF ලෙස සුරකින්න", "mood_stats": "📈 මනෝභාව ගණන්"
     }
 }
-
 L = labels[lang]
 
-# 🔐 API Key
-api_key = "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"  # << replace with your real Together.ai key
+# 🔐 API Key (REPLACE WITH YOURS)
+api_key = "Bearer f9883b98aa0011d27802548ea685a4b7756fa7a513043134fdd37cbe650590e1"
 model = "mistralai/Mistral-7B-Instruct-v0.1"
 
-# User auth
+# Login / Register
 def load_users():
     try:
         with open("users.json", "r") as f:
@@ -89,7 +75,6 @@ def login_user(username, password):
     users = load_users()
     return username in users and users[username] == hash_password(password)
 
-# Session
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -99,7 +84,7 @@ if "messages" not in st.session_state:
 if "moods" not in st.session_state:
     st.session_state.moods = []
 
-# Login / Register UI
+# Sidebar Login/Register
 st.sidebar.title("🔐 " + ("Access" if lang == "English" else "පරිශීලක පිවිසුම"))
 mode = st.sidebar.radio("Choose", [L["login"], L["register"]])
 uname = st.sidebar.text_input(L["username"])
@@ -111,18 +96,18 @@ if mode == L["login"]:
             st.session_state.username = uname
             st.success("✅ Logged in!")
         else:
-            st.error("❌ Invalid credentials.")
+            st.error("❌ Invalid login.")
 else:
     if st.sidebar.button(L["register"]):
         if register_user(uname, pword):
-            st.success("✅ Registered!")
+            st.success("✅ Registered.")
         else:
             st.warning("⚠️ Username exists.")
 
 if not st.session_state.logged_in:
     st.stop()
 
-# Personality selection
+# Personality system prompt
 persona = st.selectbox("🤖 " + ("Bot Personality" if lang == "English" else "චරිතය"), L["personalities"])
 persona_prompts = {
     "Therapist": "You are a caring mental health therapist.",
@@ -134,18 +119,20 @@ persona_prompts = {
     "Friend": "You are a friendly companion.",
     "මිතුරා": "ඔබ හිතවත් මිතුරෙකි."
 }
-
 if not any(m['role'] == 'system' for m in st.session_state.messages):
-    st.session_state.messages.append({"role": "system", "content": persona_prompts.get(persona, "You are helpful.")})
+    st.session_state.messages.append({
+        "role": "system",
+        "content": persona_prompts.get(persona, "You are helpful.") + " කරුණාකර හැම විටම සිංහලෙන් පිළිතුරු දක්වන්න."
+    })
 
-# Mood selection
+# Mood
 st.markdown(f"### 👋 {L['hello']}, **{st.session_state.username}**")
 mood = st.radio(L["mood"], L["moods"], horizontal=True)
 prompt = L["prompts"][mood]
 if mood != L["moods"][-1]:
     st.session_state.moods.append(mood)
 
-# Display chat history
+# Show previous messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -184,7 +171,7 @@ if user_input:
             box.markdown(full)
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# Save chat logs
+# Save chat to file
 os.makedirs("user_logs", exist_ok=True)
 with open(f"user_logs/{st.session_state.username}_chat.txt", "w") as f:
     for m in st.session_state.messages:
